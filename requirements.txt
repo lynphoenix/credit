@@ -1,0 +1,38 @@
+# Web框架
+Flask==3.0.0
+Flask-CORS==4.0.0
+werkzeug==3.0.1
+
+# 数据库
+SQLAlchemy==2.0.23
+pymysql>=1.1.0
+
+# 图像处理
+opencv-python==4.8.1.78
+Pillow==10.1.0
+numpy==1.24.3
+
+# OCR识别
+# GPU版本（Ubuntu部署时取消注释）
+# paddlepaddle-gpu==2.6.0
+# CPU版本（Windows开发时取消注释）
+paddlepaddle==2.6.0
+paddleocr==2.8.1
+
+# 深度学习框架
+# GPU版本（Ubuntu部署时取消注释）
+# torch==2.1.0
+# torchvision==0.16.0
+# CPU版本（Windows开发时取消注释）
+torch==2.1.0
+torchvision==0.16.0
+
+# 生产环境服务器
+gunicorn==21.2.0
+gevent==23.9.1
+
+# 工具类
+pydantic
+python-dotenv
+requests==2.31.0
+

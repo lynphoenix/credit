@@ -1,0 +1,72 @@
+[33mChecking connectivity to the model hosters, this may take a while. To bypass this check, set `DISABLE_MODEL_SOURCE_CHECK` to `True`.[0m
+��Ϣ: ���ṩ��ģʽ�޷��ҵ��ļ���
+C:\Users\lin\AppData\Local\Programs\Python\Python312\Lib\site-packages\paddle\utils\cpp_extension\extension_utils.py:718: UserWarning: No ccache found. Please be aware that recompiling all source files may be required. You can download and install ccache from: https://github.com/ccache/ccache/blob/master/doc/INSTALL.md
+  warnings.warn(warning_message)
+[32mCreating model: ('PP-LCNet_x1_0_doc_ori', None)[0m
+[32mModel files already exist. Using cached files. To redownload, please delete the directory manually: `C:\Users\lin\.paddlex\official_models\PP-LCNet_x1_0_doc_ori`.[0m
+WARNING: Logging before InitGoogleLogging() is written to STDERR
+I0107 09:23:44.871109  2068 onednn_context.cc:81] oneDNN v3.6.2
+[32mCreating model: ('UVDoc', None)[0m
+[32mModel files already exist. Using cached files. To redownload, please delete the directory manually: `C:\Users\lin\.paddlex\official_models\UVDoc`.[0m
+[32mCreating model: ('PP-LCNet_x1_0_textline_ori', None)[0m
+[32mModel files already exist. Using cached files. To redownload, please delete the directory manually: `C:\Users\lin\.paddlex\official_models\PP-LCNet_x1_0_textline_ori`.[0m
+[32mCreating model: ('PP-OCRv5_server_det', None)[0m
+[32mModel files already exist. Using cached files. To redownload, please delete the directory manually: `C:\Users\lin\.paddlex\official_models\PP-OCRv5_server_det`.[0m
+[32mCreating model: ('PP-OCRv5_server_rec', None)[0m
+[32mModel files already exist. Using cached files. To redownload, please delete the directory manually: `C:\Users\lin\.paddlex\official_models\PP-OCRv5_server_rec`.[0m
+初始化模块...
+
+共 10 张图片待测试
+================================================================================
+
+[1/10] Spécimens _ DCQ Casa.jpg
+  证件类型: 食品证书 (置信度: 0.500)
+  鉴伪评分: 0.429 (genuine)
+  ✓ 截图已保存: test_01_食品证书.png
+
+[2/10] Specimen PP svpmn.jpg
+  证件类型: 食品证书 (置信度: 0.500)
+  鉴伪评分: 0.429 (genuine)
+  ✓ 截图已保存: test_02_食品证书.png
+
+[3/10] 毛里塔尼亚输华水产品卫生证书签字官笔迹和印章信息（2022年11月11日新增）.jpg
+  证件类型: 动物证书 (置信度: 0.300)
+  鉴伪评分: 0.467 (genuine)
+  ✓ 截图已保存: test_03_动物证书.png
+
+[4/10] WechatIMG329.jpg
+  证件类型: 动物证书 (置信度: 0.300)
+  鉴伪评分: 0.469 (genuine)
+  ✓ 截图已保存: test_04_动物证书.png
+
+[5/10] 老挝植物检疫证书.jpg
+  证件类型: 植物证书 (置信度: 0.182)
+  鉴伪评分: 0.323 (genuine)
+  ✓ 截图已保存: test_05_植物证书.png
+
+[6/10] 1.斐济输华水产品卫生证书官方印章(2022年11月11日启用).png
+  ✗ 未检测到证件
+
+[7/10] 蒙古国新增签证兽医官和印章样本.png
+  证件类型: 动物证书 (置信度: 0.300)
+  鉴伪评分: 0.429 (genuine)
+  ✓ 截图已保存: test_07_动物证书.png
+
+[8/10] 苏里南输华水产品卫生证书官方授权签字官员名单及其笔迹和官方印章(2020年6月12日启用).jpg
+  证件类型: 动物证书 (置信度: 0.300)
+  鉴伪评分: 0.335 (genuine)
+  ✓ 截图已保存: test_08_动物证书.png
+
+[9/10] 苏里南输华水产品签字官及其笔迹和官方机构印章样式（2021年1月14日启用）.jpg
+  证件类型: 动物证书 (置信度: 0.300)
+  鉴伪评分: 0.335 (genuine)
+  ✓ 截图已保存: test_09_动物证书.png
+
+[10/10] 斐济输华水产品印章及签字官笔迹（2022年9月23日启用，2022年11月11日官方印章废止，签字官笔迹继续有效）.png
+  证件类型: 食品证书 (置信度: 0.500)
+  鉴伪评分: 0.253 (genuine)
+  ✓ 截图已保存: test_10_食品证书.png
+
+================================================================================
+测试完成
+截图保存位置: D:\work\code\credit\test_results

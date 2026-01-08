@@ -45,6 +45,7 @@ MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB
 
 # OCR配置
 OCR_CONFIG = {
+    'use_gpu': False,  # 使用CPU模式避免多进程CUDA初始化问题
     'use_textline_orientation': True,
     'lang': 'ch'
 }

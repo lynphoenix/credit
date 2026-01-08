@@ -43,16 +43,25 @@ class CertificateDetector:
         }
 
         try:
-            # 读取图像 - 使用numpy方式处理中文路径
-            with open(image_path, 'rb') as f:
-                image_data = np.frombuffer(f.read(), np.uint8)
-                image = cv2.imdecode(image_data, cv2.IMREAD_COLOR)
+            # 检查文件类型
+            file_ext = os.path.splitext(image_path)[1].lower()
 
-            if image is None:
-                raise ValueError(f"无法读取图像: {image_path}")
+            # 如果是PDF，需要先转换为图片
+            if file_ext == '.pdf':
+                image = self._convert_pdf_to_image(image_path)
+                if image is None:
+                    raise ValueError(f"无法读取PDF: {image_path}")
+            else:
+                # 读取图像 - 使用numpy方式处理中文路径
+                with open(image_path, 'rb') as f:
+                    image_data = np.frombuffer(f.read(), np.uint8)
+                    image = cv2.imdecode(image_data, cv2.IMREAD_COLOR)
+
+                if image is None:
+                    raise ValueError(f"无法读取图像: {image_path}")
 
             # 执行OCR识别
-            ocr_result = self.ocr.predict(image_path)
+            ocr_result = self.ocr.ocr(image_path, cls=False)
             result['ocr_result'] = ocr_result
 
             # 提取OCR文本
@@ -335,6 +344,53 @@ class CertificateDetector:
         except Exception as e:
             print(f"提取证件区域错误: {str(e)}")
             return False
+
+    def _convert_pdf_to_image(self, pdf_path: str) -> Optional[np.ndarray]:
+        """
+        将PDF的第一页转换为图像
+
+        Args:
+            pdf_path: PDF文件路径
+
+        Returns:
+            转换后的图像（numpy数组），如果失败返回None
+        """
+        try:
+            import fitz  # PyMuPDF
+
+            # 打开PDF
+            doc = fitz.open(pdf_path)
+
+            # 获取第一页
+            if len(doc) == 0:
+                print(f"PDF文件为空: {pdf_path}")
+                return None
+
+            page = doc[0]
+
+            # 设置缩放因子以提高分辨率
+            zoom = 2.0  # 放大2倍
+            mat = fitz.Matrix(zoom, zoom)
+
+            # 渲染为图像
+            pix = page.get_pixmap(matrix=mat)
+
+            # 转换为numpy数组
+            img_data = pix.tobytes("ppm")
+            nparr = np.frombuffer(img_data, np.uint8)
+            image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+            doc.close()
+
+            return image
+
+        except ImportError:
+            print("错误: 需要安装 PyMuPDF 库来处理PDF文件")
+            print("请运行: pip install pymupdf")
+            return None
+        except Exception as e:
+            print(f"PDF转换错误: {str(e)}")
+            return None
 
 
 if __name__ == '__main__':

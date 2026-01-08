@@ -21,7 +21,8 @@ echo ""
 # 配置变量
 CONDA_ENV_NAME="credit_detection"
 PYTHON_VERSION="3.9"
-PROJECT_DIR="$HOME/credit"
+PROJECT_DIR="/home/smai/linyining/credit"
+CONDA_BASE="/home/smai/dc_dir/yes"
 
 # 颜色输出
 GREEN='\033[0;32m'
@@ -101,18 +102,30 @@ print_success "激活环境: ${CONDA_ENV_NAME}"
 
 echo ""
 
-# 3. 安装CUDA和cuDNN (通过conda)
+# 3. 配置conda镜像源
+print_info "配置conda镜像源..."
+
+conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main/
+conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/free/
+conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge/
+conda config --set show_channel_urls yes
+
+print_success "Conda镜像源配置完成"
+
+echo ""
+
+# 4. 安装CUDA和cuDNN (通过conda)
 print_info "安装CUDA和cuDNN..."
 
-conda install -y cudatoolkit=11.8 cudnn=8.9 -c conda-forge
+conda install -y cudatoolkit=11.8 cudnn=8.9
 print_success "CUDA工具包安装完成"
 
 echo ""
 
-# 4. 安装PyTorch GPU版本
+# 5. 安装PyTorch GPU版本
 print_info "安装PyTorch GPU版本..."
 
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+pip install torch torchvision torchaudio -i https://pypi.tuna.tsinghua.edu.cn/simple
 print_success "PyTorch GPU版本安装完成"
 
 # 验证PyTorch GPU
@@ -120,7 +133,7 @@ python -c "import torch; print(f'PyTorch版本: {torch.__version__}'); print(f'C
 
 echo ""
 
-# 5. 安装PaddlePaddle GPU版本
+# 6. 安装PaddlePaddle GPU版本
 print_info "安装PaddlePaddle GPU版本..."
 
 python -m pip install paddlepaddle-gpu==2.6.0 -i https://pypi.tuna.tsinghua.edu.cn/simple
@@ -131,7 +144,7 @@ python -c "import paddle; print(f'PaddlePaddle版本: {paddle.__version__}'); pa
 
 echo ""
 
-# 6. 安装其他依赖
+# 7. 安装其他依赖
 print_info "安装项目依赖..."
 
 pip install -i https://pypi.tuna.tsinghua.edu.cn/simple \
@@ -150,7 +163,7 @@ print_success "项目依赖安装完成"
 
 echo ""
 
-# 7. 创建项目目录
+# 8. 创建项目目录
 print_info "设置项目目录..."
 
 if [ -d "$PROJECT_DIR" ]; then
@@ -168,7 +181,7 @@ print_success "目录结构创建完成"
 
 echo ""
 
-# 8. 创建Gunicorn配置文件
+# 9. 创建Gunicorn配置文件
 print_info "创建Gunicorn配置..."
 
 cat > gunicorn_config.py << 'EOF'
@@ -217,7 +230,7 @@ print_success "Gunicorn配置创建完成"
 
 echo ""
 
-# 9. 创建systemd服务文件
+# 10. 创建systemd服务文件
 print_info "创建systemd服务..."
 
 sudo tee /etc/systemd/system/credit-detection.service > /dev/null << EOF
@@ -230,9 +243,9 @@ Type=notify
 User=$USER
 Group=$USER
 WorkingDirectory=$PROJECT_DIR
-Environment="PATH=$HOME/anaconda3/envs/${CONDA_ENV_NAME}/bin:$PATH"
-Environment="CUDA_VISIBLE_DEVICES=0"
-ExecStart=$HOME/anaconda3/envs/${CONDA_ENV_NAME}/bin/gunicorn -c gunicorn_config.py app:app
+Environment="PATH=/home/smai/dc_dir/yes/envs/${CONDA_ENV_NAME}/bin:$PATH"
+Environment="CUDA_VISIBLE_DEVICES=1"
+ExecStart=/home/smai/dc_dir/yes/envs/${CONDA_ENV_NAME}/bin/gunicorn -c gunicorn_config.py app:app
 Restart=always
 RestartSec=10
 
@@ -244,7 +257,7 @@ print_success "Systemd服务创建完成"
 
 echo ""
 
-# 10. 创建启动/停止脚本
+# 11. 创建启动/停止脚本
 print_info "创建管理脚本..."
 
 # 启动脚本
@@ -302,7 +315,7 @@ print_success "管理脚本创建完成"
 
 echo ""
 
-# 11. 创建环境变量文件
+# 12. 创建环境变量文件
 print_info "创建环境配置文件..."
 
 cat > .env << EOF
@@ -329,7 +342,7 @@ print_success "环境配置文件创建完成"
 
 echo ""
 
-# 12. 显示部署信息
+# 13. 显示部署信息
 echo "========================================================================"
 echo "部署完成！"
 echo "========================================================================"

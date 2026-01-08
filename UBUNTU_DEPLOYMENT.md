@@ -27,7 +27,7 @@ conda --version
 
 **方式A: 从 Git 仓库克隆**
 ```bash
-cd ~
+cd /home/smai/linyining
 git clone <你的仓库URL> credit
 cd credit
 ```
@@ -41,19 +41,21 @@ tar --exclude='uploads' --exclude='database' --exclude='test_results' \
     -czf credit.tar.gz .
 
 # 传输到 Ubuntu
-scp credit.tar.gz username@server-ip:~/
+scp credit.tar.gz username@server-ip:/home/smai/linyining/
 
 # 在 Ubuntu 上解压
 ssh username@server-ip
-mkdir -p ~/credit
-tar -xzf credit.tar.gz -C ~/credit/
-cd ~/credit
+mkdir -p /home/smai/linyining/credit
+tar -xzf credit.tar.gz -C /home/smai/linyining/credit/
+cd /home/smai/linyining/credit
 ```
 
 ### 3. 运行自动部署脚本
 
+**注意**: 部署脚本会自动使用清华大学镜像源加速下载，如果您的网络环境较好，可以注释掉脚本中的镜像源配置。
+
 ```bash
-cd ~/credit
+cd /home/smai/linyining/credit
 bash deploy_ubuntu_gpu.sh
 ```
 
@@ -71,7 +73,19 @@ bash deploy_ubuntu_gpu.sh
 
 **方式A: 手动启动（推荐用于测试）**
 ```bash
-cd ~/credit
+cd /home/smai/linyining/credit
+
+# 激活conda环境
+eval "$(conda shell.bash hook)"
+conda activate credit_detection
+
+# 设置使用GPU 1（如果GPU 0被占用）
+export CUDA_VISIBLE_DEVICES=1
+
+# 启动服务
+nohup gunicorn -c gunicorn_config.py app:app > logs/startup.log 2>&1 &
+
+# 或使用启动脚本
 ./start_server.sh
 ```
 
@@ -90,12 +104,15 @@ sudo systemctl status credit-detection
 ### 5. 验证服务
 
 ```bash
-# 测试服务
+# 测试本地访问
 curl http://localhost:5000
 
+# 测试远程访问（从其他机器）
+curl http://100.100.152.204:5000
+
 # 查看日志
-tail -f ~/credit/logs/access.log
-tail -f ~/credit/logs/error.log
+tail -f /home/smai/linyining/credit/logs/access.log
+tail -f /home/smai/linyining/credit/logs/error.log
 ```
 
 ## 服务管理
@@ -139,12 +156,17 @@ sudo journalctl -u credit-detection -f
 
 编辑 `.env` 文件:
 ```bash
-# 使用第一个 GPU
+# 使用GPU 1（如果GPU 0被占用）
+CUDA_VISIBLE_DEVICES=1
+
+# 使用第一个 GPU（如果空闲）
 CUDA_VISIBLE_DEVICES=0
 
 # 使用多个 GPU（如果支持）
 CUDA_VISIBLE_DEVICES=0,1
 ```
+
+**注意**: 在本次部署中，由于GPU 0已被其他进程占用，系统已自动配置使用GPU 1。
 
 ### 监控 GPU 使用
 
@@ -155,6 +177,9 @@ watch -n 1 nvidia-smi
 # 或使用 gpustat
 pip install gpustat
 gpustat -i 1
+
+# 查看当前服务使用的GPU情况
+nvidia-smi | grep python
 ```
 
 ## 性能优化
@@ -335,7 +360,7 @@ scp username@server-ip:~/credit/backup-*.tar.gz ./
 ### 恢复数据
 
 ```bash
-cd ~/credit
+cd /home/smai/linyining/credit
 tar -xzf backup-20260107.tar.gz
 ```
 
@@ -348,7 +373,7 @@ tar -xzf backup-20260107.tar.gz
 crontab -e
 
 # 每周清理超过30天的日志
-0 0 * * 0 find ~/credit/logs -name "*.log" -mtime +30 -delete
+0 0 * * 0 find /home/smai/linyining/credit/logs -name "*.log" -mtime +30 -delete
 ```
 
 ### 设置告警
@@ -365,21 +390,67 @@ fi
 
 ```bash
 # 1. 获取代码
-cd ~
+cd /home/smai/linyining
 git clone <repo-url> credit
 cd credit
 
-# 2. 部署环境
+# 2. 部署环境（会自动配置镜像源和GPU）
 bash deploy_ubuntu_gpu.sh
 
 # 3. 启动服务
-./start_server.sh
+# 激活conda环境
+eval "$(conda shell.bash hook)"
+conda activate credit_detection
+
+# 设置使用GPU 1
+export CUDA_VISIBLE_DEVICES=1
+
+# 启动服务
+nohup gunicorn -c gunicorn_config.py app:app > logs/startup.log 2>&1 &
 
 # 4. 验证
+# 本地访问
 curl http://localhost:5000
+
+# 远程访问（从其他机器，请根据实际IP修改）
+curl http://100.100.152.204:5000
 
 # 5. 查看日志
 tail -f logs/access.log
+
+# 6. 查看GPU使用情况
+nvidia-smi | grep python
 ```
 
 完成！您的证件识别系统已在 Ubuntu GPU 服务器上运行。
+
+## 重要提示
+
+1. **OCR模式**: 系统已配置使用CPU模式进行OCR识别，避免Gunicorn多进程与CUDA初始化冲突
+2. **GPU选择**: 如需使用GPU加速，建议使用单worker模式（workers=1）或sync worker
+3. **镜像源**: 部署脚本已配置清华大学镜像源加速下载
+4. **远程访问**: 服务已绑定到0.0.0.0:5000，可从远程访问（请根据实际IP修改示例中的IP地址）
+5. **依赖管理**: 所有Python依赖已通过pip安装到credit_detection conda环境中
+6. **PDF支持**: 系统已安装PyMuPDF库，支持PDF格式证件识别
+
+## 已知问题和解决方案
+
+### PaddleOCR多进程CUDA冲突
+
+**问题**: Gunicorn多worker模式下，PaddleOCR的GPU初始化会导致worker崩溃
+
+**解决方案**:
+- 当前配置：OCR使用CPU模式（`config.py`中`OCR_CONFIG['use_gpu'] = False`）
+- 如需GPU加速：
+  ```python
+  # gunicorn_config.py
+  workers = 1  # 改为单worker
+  worker_class = "sync"  # 使用sync worker
+  ```
+  ```python
+  # config.py
+  OCR_CONFIG = {
+      'use_gpu': True,  # 启用GPU
+      'gpu_id': 1,  # 指定GPU编号
+  }
+  ```

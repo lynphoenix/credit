@@ -45,18 +45,23 @@ credit/
 
 ### 1. 环境要求
 
-- Python 3.12+
+- Python 3.9+
 - MySQL 5.7+ (可选，用于数据持久化)
 - 8GB+ RAM (OCR模型需要较大内存)
+- GPU: NVIDIA GPU (可选，用于加速推理)
 
 ### 2. 安装依赖
 
 ```bash
-# 安装Python依赖
+# 基础依赖
 pip install -r requirements.txt
 
-# 如果需要使用GPU加速
+# PDF支持（必需）
+pip install pymupdf
+
+# GPU加速（可选，需要NVIDIA GPU和CUDA）
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
+pip install paddlepaddle-gpu==2.6.0 -i https://pypi.tuna.tsinghua.edu.cn/simple
 ```
 
 ### 3. 配置数据库（可选）
@@ -212,6 +217,7 @@ CERTIFICATE_TYPES = {
 
 # OCR配置
 OCR_CONFIG = {
+    'use_gpu': False,  # CPU模式（多进程环境推荐）
     'use_textline_orientation': True,
     'lang': 'ch'
 }
@@ -222,6 +228,10 @@ FORGERY_THRESHOLDS = {
     'suspicious': 0.8
 }
 ```
+
+**注意**:
+- 生产环境使用Gunicorn多worker模式时，建议OCR使用CPU模式
+- 如需GPU加速OCR，请使用单worker模式（workers=1）
 
 ## 测试结果
 
@@ -242,15 +252,76 @@ FORGERY_THRESHOLDS = {
 - **OCR识别准确率**: 90%+ (取决于图片质量)
 - **信息提取准确率**: 85%+
 - **鉴伪检测准确率**: 90%+ (需要更多训练数据验证)
-- **处理速度**: 3-5秒/张 (CPU模式)
+- **处理速度**:
+  - CPU模式: 10-20秒/张
+  - GPU模式: 3-5秒/张
+
+## 部署说明
+
+### Ubuntu GPU服务器部署
+
+详细部署步骤请参考 [UBUNTU_DEPLOYMENT.md](UBUNTU_DEPLOYMENT.md)
+
+快速部署：
+```bash
+# 1. 克隆代码
+cd /path/to/your/directory
+git clone <repo-url> credit
+cd credit
+
+# 2. 运行自动部署脚本（GPU环境）
+bash deploy_ubuntu_gpu.sh
+
+# 3. 启动服务
+source /home/your-user/anaconda3/etc/profile.d/conda.sh
+conda activate credit_detection
+nohup gunicorn -c gunicorn_config.py app:app > logs/startup.log 2>&1 &
+
+# 4. 验证
+curl http://localhost:5000
+```
+
+### 生产环境配置建议
+
+1. **多进程模式（推荐）**：
+   - OCR使用CPU模式
+   - Gunicorn workers=2-4
+   - 适合中等并发场景
+
+2. **GPU加速模式**：
+   - OCR使用GPU模式
+   - Gunicorn workers=1
+   - 适合高性能要求场景
+
+3. **使用Nginx反向代理**：
+```nginx
+upstream credit_backend {
+    server 127.0.0.1:5000;
+}
+
+server {
+    listen 80;
+    server_name your-domain.com;
+
+    location / {
+        proxy_pass http://credit_backend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+```
 
 ## 注意事项
 
 1. **图片质量**：建议使用清晰度300DPI以上的扫描件或照片
-2. **中文路径**：系统已处理中文路径问题，可以正常使用
-3. **内存占用**：PaddleOCR模型首次加载需要下载约100MB模型文件
-4. **数据库**：如不需要持久化存储，可不配置数据库
-5. **GPU加速**：如有NVIDIA GPU，建议安装CUDA版本的PyTorch以提升性能
+2. **文件格式**：支持JPG、PNG、PDF格式，PDF会自动转换为图片进行识别
+3. **中文路径**：系统已处理中文路径问题，可以正常使用
+4. **内存占用**：PaddleOCR模型首次加载需要下载约100MB模型文件
+5. **数据库**：如不需要持久化存储，可不配置数据库
+6. **GPU加速**：
+   - 单worker模式：可启用GPU加速OCR
+   - 多worker模式：建议使用CPU模式避免CUDA冲突
+7. **PDF处理**：需要安装pymupdf库（`pip install pymupdf`）
 
 ## 常见问题
 
@@ -279,23 +350,38 @@ A: 检查：
 - 防火墙是否允许访问
 - Flask是否正确安装
 
+### Q5: PDF文件识别失败？
+A: 确保：
+- 已安装pymupdf库：`pip install pymupdf`
+- PDF文件不是加密的
+- PDF质量清晰可读
+
+### Q6: Gunicorn worker崩溃？
+A: 如遇到worker频繁崩溃：
+- 检查logs/error.log中的错误信息
+- 如有CUDA初始化错误，将config.py中的`OCR_CONFIG['use_gpu']`设为False
+- 或改用单worker模式：gunicorn_config.py中设置`workers=1`
+
 ## 未来改进方向
 
 - [ ] 增加更多证书类型支持
 - [ ] 优化信息提取的正则表达式
 - [ ] 训练更准确的鉴伪检测模型
 - [ ] 添加批量处理功能
-- [ ] 支持PDF多页识别
+- [x] 支持PDF格式识别
 - [ ] 添加用户权限管理
 - [ ] 提供RESTful API文档
+- [ ] 优化多进程GPU加速方案
 
 ## 技术栈
 
-- **后端框架**: Flask 3.1+
-- **OCR引擎**: PaddleOCR 3.0+
-- **深度学习**: PyTorch 2.0+
+- **后端框架**: Flask 3.0+
+- **OCR引擎**: PaddleOCR 2.8+
+- **深度学习**: PyTorch 2.0+ / PaddlePaddle 2.6+
 - **数据库**: MySQL 5.7+ / SQLAlchemy 2.0+
-- **图像处理**: OpenCV 4.0+, Pillow
+- **图像处理**: OpenCV 4.8+, Pillow 10.1+
+- **PDF处理**: PyMuPDF 1.26+
+- **WSGI服务器**: Gunicorn 23.0+ (gevent workers)
 - **前端**: HTML5 + CSS3 + JavaScript (原生)
 
 ## 开发团队
@@ -307,6 +393,14 @@ A: 检查：
 本项目仅供学习和研究使用。
 
 ## 更新日志
+
+### v1.1.0 (2026-01-07)
+- ✨ 新增PDF格式证件识别支持
+- 🐛 修复PaddleOCR API调用错误（predict -> ocr）
+- 🐛 修复Gunicorn多进程环境下CUDA初始化冲突
+- 🔧 配置OCR使用CPU模式以支持多worker并发
+- 📝 更新部署文档，添加已知问题说明
+- ✅ 完成图片和PDF格式的端到端测试（成功率80%+）
 
 ### v1.0.0 (2024-01-06)
 - ✨ 实现证件检测与OCR识别功能
